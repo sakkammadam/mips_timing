@@ -174,6 +174,11 @@ def detect_hazards_no_fwd(current: Instruction, previous: Instruction, prev_no: 
                    "{}]"
                    " Destination Register {}").format(
                 current.raw, current.rs, prev_no + 1, previous.raw, previous.rt)
+        elif current.rt == previous.rt:
+            tmp = ("[RAW HAZARD] Instruction [{}] Register Memory Location {} depends on Instruction#{} Instruction ["
+                   "{}]"
+                   " Destination Register {}").format(
+                current.raw, current.rs, prev_no + 1, previous.raw, previous.rt)
         else:
             tmp = ''
         return tmp
@@ -278,11 +283,16 @@ def stall_helper_no_fwd(current: Instruction, previous: Instruction, hazard: str
             pipeline_stages.insert(1, stall_stage)
     elif hazard.find("RAW HAZARD") > 0:
         # this is applicable only ADD,SUB and ADD/SUB - won't be present if forwarding unit present
-        if current.opcode in ["ADD", "SUB"] and previous.opcode in ["ADD", "SUB"]:
+        if current.opcode in ["ADD", "SUB"] and previous.opcode in ["ADD", "SUB"] and run == 1:
             # insert a single stage
             pipeline_stages.insert(1, stall_stage)
             # insert a single stage
             pipeline_stages.insert(1, stall_stage)
+        # this is applicable only ADD,SUB and ADD/SUB - won't be present if forwarding unit present
+        if current.opcode in ["ADD", "SUB"] and previous.opcode in ["ADD", "SUB"] and run == 2:
+            # insert a single stage
+            pipeline_stages.insert(1, stall_stage)
+
         # this is applicable only for LW and SW
         if current.opcode == "LW" and previous.opcode == "SW" and run == 1:
             # only for just previous step
@@ -292,12 +302,20 @@ def stall_helper_no_fwd(current: Instruction, previous: Instruction, hazard: str
             # only for just previous step
             # insert a single stage
             pipeline_stages.insert(1, stall_stage)
+            # insert a single stage --
+            pipeline_stages.insert(1, stall_stage)
+        if current.opcode == "SW" and previous.opcode == "LW" and run == 2:
+            # only for just previous step
+            # insert a single stage
+            pipeline_stages.insert(1, stall_stage)
         if current.opcode == "SW" and previous.opcode in ["ADD", "SUB"]:
             # insert a single stage
             pipeline_stages.insert(1, stall_stage)
             # insert a single stage
             pipeline_stages.insert(1, stall_stage)
         if current.opcode in ["ADD", "SUB"] and previous.opcode == "LW":
+            # insert a single stage
+            pipeline_stages.insert(1, stall_stage)
             # insert a single stage
             pipeline_stages.insert(1, stall_stage)
     elif hazard.find("WAW HAZARD") > 0:
@@ -332,6 +350,9 @@ def stall_helper_fwd(current: Instruction, previous: Instruction, hazard: str, p
             pipeline_stages.insert(1, stall_stage)
     elif hazard.find("RAW HAZARD") > 0:
         if current.opcode in ["ADD", "SUB"] and previous.opcode == "LW" and run == 1:
+            # insert a single stage
+            pipeline_stages.insert(1, stall_stage)
+        if current.opcode == "SW" and previous.opcode == "LW" and run == 1:
             # insert a single stage
             pipeline_stages.insert(1, stall_stage)
     elif hazard.find("WAW HAZARD") > 0:
